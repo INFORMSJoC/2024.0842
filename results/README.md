@@ -1,0 +1,2 @@
+The result files are prefixed with either `MM` or `BB`, followed by a range of system identifiers in the format `S<start>-S<end>`. Files prefixed with `MM` contain results from the MILP models, while those prefixed with `BB` contain results from the branch-and-bound method. Each line in these files corresponds to a specific instance. For example, the file `MM.S01-04.csv` contains the results for instances generated based on systems 1 through 4, obtained using the MILP models. 
+
