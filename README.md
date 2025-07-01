@@ -42,10 +42,10 @@ This repository is organized as follows:
   - Files prefixed with `mm_*.h/.cpp` implement the MILP models.
   - Files prefixed with `bb_*.h/.cpp` implement the branch-and-bound method.
 - `data`/— Contains benchmark instances for testing the proposed approaches. See the `README` file in this directory for data format details.
-  - `data/H_2_4_Gamma_0_1.0`/ Data used in  used in Sections 4.2.1-4.2.3
+  - `data/H_2_4_Gamma_0_1.0`/ Data used in  used in Sections 4.2.1-4.2.3, the data with 5, 6, and 7 subsystems are from [1].
   - `data/H_5_6_Gamma_0_1.0`/ Data with 5 or 6 component types,  used in Sections 4.2.5. 
   - `data/H_2_4_Gamma_0_0.5`/ Data with component reliability drawn from [0, 0.5], also used in Sections 4.2.5. 
-- `results`— Contains the results of computational experiments.
+- `results`— Contains the results of computational experiments. See the `README` file in this directory for more details.
   - `results/H_2_4_Gamma_0_1.0`/ Results corresponding to Sections 4.2.1-4.2.3
   - `results/H_5_6_Gamma_0_1.0`/  Results for instances with 5 or 6 component types in Sections 4.2.5. 
   - `results/H_2_4_Gamma_0_0.5`/ Results with random reliability values in [0, 0.5], from Sections 4.2.5. 
@@ -96,7 +96,7 @@ Available options:
 
 > **Note:** Only the default value `0` for the `--test` option is relevant to the experiments reported in the paper.
 
-#### Example:
+Example:
 
 ```shell
 ra_mm -s 1 -f rrap_ns5_nh2_m2_seed1.txt -m 210 -x 3600
@@ -134,7 +134,7 @@ Available options:
 
 > **Note:** Only the default value `0` for the `--test` option is relevant to the experiments reported in the paper.
 
-#### Example:
+Example:
 
 ```shell
 ra_bb -s 1 -f rrap_ns5_nh2_m2_seed1.txt -x 3600
@@ -152,3 +152,7 @@ For the example above, the output file would be:
 ``````
 s1_rrap_ns5_nh2_m2_seed1_BB_sol.txt
 ``````
+
+## References
+
+[1] [Young Woong Park](https://pubsonline.informs.org/action/doSearch?text1=Park%2C+Young+Woong&field1=Contrib) (2020) MILP Models for Complex System Reliability Redundancy Allocation with Mixed Components. INFORMS Journal on Computing 32(3):600-619. 
