@@ -298,15 +298,15 @@ namespace rrap
     /* Q-form */
     std::optional<ProbSolution> ProbSolver::solve_Q_basic_model() const
     {
-        /* the number of logical subsystem */
+        /* the number of product terms */
         const auto num_logic_subs { inst.system_reliability.m_other_terms.size() };
 #ifndef  NDEBUG
         std::cout << "NUM_LOGIC_SUBSYSTEMS: " << num_logic_subs << std::endl;
 #endif
 
-        /* save logical-subsystems in a vector for following usage */
-        std::vector<std::pair<std::set<int>, int>> logic_subsystems;  /* all logical subsystems */
-        std::vector<size_t> num_subs_in_logic;     /* number of subsystems in each logic subsystem */
+        /* save product terms in a vector for the following usage */
+        std::vector<std::pair<std::set<int>, int>> logic_subsystems;
+        std::vector<size_t> num_subs_in_logic;
         logic_subsystems.reserve(num_logic_subs);
         num_subs_in_logic.reserve(num_logic_subs);
         for (auto& [term, coeff] : inst.system_reliability.m_other_terms){
@@ -352,11 +352,11 @@ namespace rrap
             }
         }
 
-        bool combination_model_use_rho_ub = true;
-        bool combination_model_use_valid_inequalities = true;
-        bool combination_model_use_aggregated_expression = false;
-        bool combination_model_use_dominated_components = true;
-        bool combination_model_use_ub_one = false;
+        const bool combination_model_use_rho_ub = true;
+        const bool combination_model_use_valid_inequalities = true;
+        const bool combination_model_use_aggregated_expression = false;
+        const bool combination_model_use_dominated_components = true;
+        const bool combination_model_use_ub_one = false;
 
         /* calculate the upper bounds of decision variables \varphi_{ls} */
         std::vector<std::vector<double>> varphi_ub_(num_logic_subs);
@@ -391,46 +391,8 @@ namespace rrap
                     }
                 }
             }
-#ifndef  NDEBUG
-            for (auto l = 0u; l < num_logic_subs; ++l) {
-                for (auto s = 0u; s < num_subs_in_logic[l]; ++s) {
-                    for (auto h = 0u; h < inst.num_component_types; ++h) {
-                        std::cout <<"rho_ub[" << l << "][" << s << "]["<< h << "] = " << rho_ub[l][s][h] << "\n";
-                    }
-                }
-            }
-#endif
         }
 
-        /* sort the subsystems according to the number of their occurrence in logic subsystems */
-#if 0
-        std::map<int, int> num_occurrence;
-        for (auto &subsystem: logic_subsystems) {
-            for (auto &term: subsystem.first) {
-                num_occurrence[term] += 1;
-            }
-        }
-
-        std::vector<int> sorted_subsystems(inst.num_subsystems);
-        std::iota(sorted_subsystems.begin(), sorted_subsystems.end(), 0);
-        std::sort(sorted_subsystems.begin(), sorted_subsystems.end(),
-                  [&num_occurrence](int a, int b) { return num_occurrence[a] < num_occurrence[b]; });
-
-        std::vector<int> branch_priorities(inst.num_subsystems);
-        for (int s = 0; s < inst.num_subsystems; ++s){
-            branch_priorities[sorted_subsystems[s]] = s * 10;
-        }
-#ifndef  NDEBUG
-        for (int x = 0; x < inst.num_subsystems; ++x) {
-            std::cout << "sorted_subsystems[" << x << "]=" << sorted_subsystems[x] << std::endl;
-        }
-#endif
-#ifndef NDEBUG
-        for (int x = 0; x < inst.num_subsystems; ++x) {
-            std::cout << "num_occurrence[" << x << "]=" << num_occurrence[x] << std::endl;
-        }
-#endif
-#endif
 
         /* model and solve */
 
@@ -462,7 +424,6 @@ namespace rrap
                     for (auto k = 0u; k <= inst.component_ub_at_subsystem[j][h]; ++k)
                     {
                         x[j][h][k] = model.addVar(0.0, 1.0, 0.0, GRB_BINARY);
-                        // x[j][h][k].set(GRB_IntAttr_BranchPriority, branch_priorities[j]);
                     }
                 }
             }
@@ -478,12 +439,10 @@ namespace rrap
             }
 
 
-            // Constraints:
+            // constraints
 
             /*
-             * boundary condition:
-             * for each logic subsystem l, calculate the reliability of the first subsystem (s = 0) after the first type
-             * of components (h = 0) is configured.
+             * boundary condition
              * */
             for (auto l = 0u; l < num_logic_subs; ++l) {
                 const auto j = subsystems[l][0u];
@@ -502,7 +461,6 @@ namespace rrap
                     const auto j = subsystems[l][s]; // j = \delta(s)
                     for (auto k = 0u; k <= inst.component_ub_at_subsystem[j][0u]; ++k) {
                         const auto h_last = inst.num_component_types - 1u;
-                        // model.addGenConstrIndicator(x[j][0u][k], 1, rho[l][s][0u] == rho[l][s - 1u][h_last] * std::pow(1.0 - inst.component_reliability_at_subsystem[j][0u], static_cast<double>(k)));
                         if (logic_subsystems[l].second > 0) {
                             const auto big_m = rho_ub[l][s - 1u][h_last] * (1 - compute_jhk(j,0u,k));//compute_comb_big_m(subsystems, l, s, 0u, k);
                             model.addConstr(rho[l][s][0u] <= rho[l][s - 1u][h_last] * compute_jhk(j,0u,k) + big_m * (1 - x[j][0u][k]));
@@ -521,8 +479,6 @@ namespace rrap
                     const auto j = subsystems[l][s]; // j = \delta(s)
                     for (auto h = 1u; h < inst.num_component_types; ++h) {
                         for (auto k = 0u; k <= inst.component_ub_at_subsystem[j][h]; ++k) {
-                            // model.addGenConstrIndicator(x[j][h][k], 1, rho[l][s][h] == rho[l][s][h - 1u] * std::pow(1.0 - inst.component_reliability_at_subsystem[j][h], static_cast<double>(k)));
-
                             if (logic_subsystems[l].second > 0) {
                                 auto big_m = rho_ub[l][s][h - 1u] * (1 - compute_jhk(j,h,k)); // compute_comb_big_m_positive(subsystems, l, s, h, k);
                                 model.addConstr(rho[l][s][h] <= rho[l][s][h - 1u] * compute_jhk(j,h,k) + big_m * (1 - x[j][h][k]));
@@ -575,23 +531,6 @@ namespace rrap
 
             /* valid inequalities */
             if (combination_model_use_valid_inequalities) {
-                // the value of \rho is non-increasing from component to component within each subsystem
-                // for (auto l = 0u; l < num_logic_subs; ++l) {
-                //     for (auto s = 0u; s < num_subs_in_logic[l]; ++s) {
-                //         for (auto h = 1u; h < inst.num_component_types; ++h) {
-                //             model.addConstr(rho[l][s][h] <= rho[l][s][h - 1u]);
-                //         }
-                //     }
-                // }
-
-                // and a similar relationship exists among the transition between different subsystems
-                // for (auto l = 0u; l < num_logic_subs; ++l) {
-                //     for (auto s = 1u; s < num_subs_in_logic[l]; ++s) {
-                //         const auto last_com = inst.num_component_types - 1u;
-                //         model.addConstr(rho[l][s][0u] <= rho[l][s - 1u][last_com]);
-                //     }
-                // }
-
                 // upper bound on the reliability of each subsystem after the components are configured
                 for (auto l = 0u; l < num_logic_subs; ++l) {
                     for (auto s = 0u; s < num_subs_in_logic[l]; ++s) {
@@ -628,27 +567,6 @@ namespace rrap
                         }
                     }
                 }
-                //                for (auto l1 = 0u; l1 < num_logic_subs; ++l1) {
-                //                    std::set<size_t> a;
-                //                    for (auto s1 = 0u; s1 < num_subs_in_logic[l1]; ++s1) {
-                //                        a.insert(subsystems[l1][s1]);
-                //                        for (auto l2 = 0u; l2 < num_logic_subs; ++l2) {
-                //                            if (l1 == l2) continue;
-                //
-                //                            std::set<size_t> b;
-                //                            for (auto s2 = 0u; s2 < num_subs_in_logic[l2]; ++s2) {
-                //                                b.insert(subsystems[l2][s2]);
-                //
-                //                                // check if 'a' is a subset of 'b'
-                //                                if (std::includes(b.begin(), b.end(), a.begin(), a.end())) {
-                //                                    const auto h_last = inst.num_component_types - 1u;
-                //                                    model.addConstr(rho[l2][s2][h_last] <= rho[l1][s1][h_last]);
-                //                                    break;
-                //                                }
-                //                            }
-                //                        }
-                //                    }
-                //                }
             }
 
 
@@ -670,21 +588,11 @@ namespace rrap
                 model.setObjective(expr, GRB_MAXIMIZE);
             }
 
-            // Solve:
+            // solve
 
-            // Time limit: 5 mins
             if (has_time_limit) {
                 model.set(GRB_DoubleParam_TimeLimit, time_limit);
             }
-
-            // Gap tolerance: 0.1%
-            // model.set(GRB_DoubleParam_MIPGap, 0.001);
-
-            // model.set(GRB_IntParam_Method, GRB_METHOD_BARRIER);
-            // model.set(GRB_IntParam_NodeMethod, GRB_METHOD_BARRIER);
-
-            model.write("model.lp");
-            // model.write("model.mps");
 
             auto start_time = std::chrono::high_resolution_clock::now();
 
@@ -708,7 +616,7 @@ namespace rrap
 
             std::cout << "\t-- OBJ: " << model.get(GRB_DoubleAttr_ObjVal) << std::endl;
 
-            // Extract solution:
+            // extract solution
 
             auto s = ProbSolution{inst};
             s.obj = model.get(GRB_DoubleAttr_ObjVal);
@@ -769,7 +677,6 @@ namespace rrap
     {
         /* the number of product terms */
         const auto num_logic_subs { inst.system_reliability.m_other_terms.size() };
-        // std::cout << "NUM_LOGIC_SUBSYSTEMS: " << num_logic_subs << std::endl;
 
         /* save product terms in a vector for the following usage */
         std::vector<std::pair<std::set<int>, int>> logic_subsystems;  /* all product terms */
@@ -848,7 +755,7 @@ namespace rrap
             }
 
 
-            // Constraints
+            // constraints
 
             /*
              * boundary condition
@@ -1369,7 +1276,7 @@ namespace rrap
                 model.setObjective(expr, GRB_MAXIMIZE);
             }
 
-            // Solve:
+            // solve
 
             if (has_time_limit) {
                 model.set(GRB_DoubleParam_TimeLimit, time_limit);
@@ -1532,7 +1439,7 @@ namespace rrap
             }
 
 
-            // Constraints:
+            // constraints
 
             for (auto l = 1u; l < systems.size(); ++l) {
                 const auto j = systems[l]->m_subsystem_id.value();
@@ -1582,7 +1489,6 @@ namespace rrap
 
 
             // exactly a particular number of components of type h is used
-            // - \sum_{k=0}^{u_jh} x_{jh}^{k} >= 1, \forall j\in J, h\in H_j.
             for (auto j = 0u; j < inst.num_subsystems; ++j) {
                 GRBLinExpr expr = 0;
 
@@ -2164,7 +2070,7 @@ namespace rrap
                 model.setObjective(expr, GRB_MAXIMIZE);
             }
 
-            // Solve:
+            // solve
 
             if (has_time_limit) {
                 model.set(GRB_DoubleParam_TimeLimit, time_limit);
