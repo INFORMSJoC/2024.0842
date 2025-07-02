@@ -22,7 +22,7 @@ Below is the BibTex for citing this snapshot of the repository.
 @misc{feng2025exact,
   author =        {Jianguang Feng and Zhi-Long Chen and Ada Che and Chengbin Chu},
   publisher =     {INFORMS Journal on Computing},
-  title =         {{Exact MILP models for redundancy allocation with mixed components}},
+  title =         {Exact {MILP} models for redundancy allocation with mixed components},
   year =          {2025},
   doi =           {10.1287/ijoc.2024.0842.cd},
   url =           {https://github.com/INFORMSJoC/2024.0842},
